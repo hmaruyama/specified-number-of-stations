@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>周辺に指定された個数の駅がある地点を探せ</title>
+
+  <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+  <!-- Google Maps -->
+  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAKWRLe_CDEPJGRMvzu25viim0jHekxA5s"></script>
+
+  <!-- Bootstrap-->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+  <style>
+    html, body  { height: 100%; }
+    div.main    { height: 100%; }
+    div.under_navbar { padding-top: 50px; height: 100%; }
+    div.container { height: 100%; padding: 0; }
+    div#map_canvas { width: 100%; height: 100%; }
+    div#problem_text { font-size: 18px; padding: 5px 10px; }
+    div#result_text { font-size: 14px; padding: 5px 10px; }
+    b { color: #e91e66; }
+  </style>
+
+  <script>
+    var EWS_KEY = 'fHguF2wJV6Fhj2gC'; // 駅すぱあとWebサービスのアクセスキー
+
+    var g_station_count;
+    var g_range;
+
+    var g_map;
+    var g_clicked_point_markers = [];
+    var g_station_markers = [];
+    var g_circles = [];
+
+    $(function() {
+      var latlng = new google.maps.LatLng(35.682225,139.764688);
+      var opts = {
+        zoom: 13,
+        center: latlng,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        scaleControl: true
+      };
+      g_map = new google.maps.Map(document.getElementById("map_canvas"), opts);
+      g_map.addListener("click", onClickMap);
+
+      initProblem();
+    });
+
+    function initProblem() {
+      g_station_count = 1 + Math.floor(Math.random() * 40);
+      g_range = 1000 + Math.floor(Math.random() * (10 + g_station_count / 5)) * 100;
+      var html = '';
+      html += '半径 <b>' + g_range + 'メートル</b> 以内にちょうど <b>' + g_station_count + '個</b> の駅がある地点を探せ！';
+      $('#problem_text').html(html);
+    }
+
+    function onClickMap(e) {
+      var lat = e.latLng.lat();
+      var lng = e.latLng.lng();
+      console.log(e.latLng.lat(), e.latLng.lng());
+
+      getStationsByLatLng(lat, lng, g_range, function(data) {
+        // 既存のマーカーと円をクリア
+        clear();
+
+        var html = '';
+        html += 'その点 <b>(' + lat + ', ' + lng + ')</b> の半径 <b>' + g_range + 'メートル</b> 以内には <b>' + data.stations.length + '個</b>の駅があるぞ。';
+        $('#result_text').html(html);
+
+        var latlng = new google.maps.LatLng(lat, lng);
+
+        // 駅マーカー設置
+        data.stations.forEach(function(station) {
+          var latlng = new google.maps.LatLng(station.lat, station.lng);
+          var marker = new google.maps.Marker({
+            position: latlng,
+            title: station.name,
+            icon: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",  // アイコンのリスト： http://stackoverflow.com/a/18623391/5209556
+            map: g_map
+          });
+          g_station_markers.push(marker);
+        });
+
+        // マーカー設置
+        var marker = new google.maps.Marker({
+          position: latlng,
+          map: g_map
+        });
+        g_clicked_point_markers.push(marker);
+
+        // 円を設置
+        var circle = new google.maps.Circle({
+          map:  g_map,   // 表示させる地図（google.maps.Map）
+          center: latlng,         // 中心点(google.maps.LatLng)
+          fillColor: '#ff0000',   // 塗りつぶし色
+          fillOpacity: 0.2,       // 塗りつぶし透過度（0: 透明 ⇔ 1:不透明）
+          radius: g_range,             // 半径（ｍ）
+          strokeColor: '#ff0000', // 外周色
+          clickable: true,
+          strokeOpacity: 1,       // 外周透過度（0: 透明 ⇔ 1:不透明）
+          strokeWeight: 1         // 外周太さ（ピクセル）
+        });
+        g_circles.push(circle);
+
+        if (data.stations.length == g_station_count) {
+          setTimeout(function() {
+            alert('おめでとう！\nその点の周辺にはちょうど ' + g_station_count + '個 の駅があるぞ！');
+          }, 500);
+        }
+
+      });
+    }
+
+    function clear() {
+      g_station_markers.forEach(function(marker) {
+        marker.setMap(null);
+      });
+      g_clicked_point_markers.forEach(function(marker) {
+        marker.setMap(null);
+      });
+      g_circles.forEach(function(circle) {
+        circle.setMap(null);
+      });
+    }
+
+    // 緯度経度から周辺駅検索
+    function getStationsByLatLng(lat, lng, range, callback) {
+      var params = {
+        key: EWS_KEY,
+        geoPoint: lat + ',' + lng + ',' + range,
+        type: "train",
+        gcs: "wgs84"    // Google Mapsは世界測地系なので、世界測地系の緯度経度を取得
+      };
+      // 駅すぱあとWebサービス呼び出し
+      $.getJSON("http://api.ekispert.jp/v1/json/geo/station", params)
+        .done(function(data) {
+          console.log(data);
+          var stations = [];
+          data["ResultSet"]["Point"].forEach(function(point) {
+            stations.push({
+              name: point["Station"]["code"],
+              name: point["Station"]["Name"],
+              lat: parseFloat(point["GeoPoint"]["lati_d"]),
+              lng: parseFloat(point["GeoPoint"]["longi_d"])
+            });
+          });
+          callback({
+            stations: stations
+          });
+        }).fail(function(jqXHR, textStatus, errorThrown) {
+          alert("エラーが発生しました。");
+          console.log(textStatus);
+          console.log(errorThrown);
+        });
+    }
+
+
+  </script>
+</head>
+<body>
+  <nav class="navbar navbar-fixed-top navbar-default">
+    <div class="navbar-header">
+      <div id="problem_text"></div>
+      <div id="result_text"></div>
+    </div>
+  </nav>
+  <div class="under_navbar">
+    <div class="main">
+      <div id="map_canvas"></div>
+    </div>
+  </div>
+</body>
+</html>
+<!-- vim: set ts=2 sts=2 sw=2 expandtab list: -->
