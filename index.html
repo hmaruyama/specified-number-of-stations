@@ -81,7 +81,7 @@
           var marker = new google.maps.Marker({
             position: latlng,
             title: station.name,
-            icon: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png",  // アイコンのリスト： http://stackoverflow.com/a/18623391/5209556
+            icon: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png",  // アイコンのリスト： http://stackoverflow.com/a/18623391/5209556
             map: g_map
           });
           g_station_markers.push(marker);
@@ -138,7 +138,7 @@
         gcs: "wgs84"    // Google Mapsは世界測地系なので、世界測地系の緯度経度を取得
       };
       // 駅すぱあとWebサービス呼び出し
-      $.getJSON("http://api.ekispert.jp/v1/json/geo/station", params)
+      $.getJSON("https://api.ekispert.jp/v1/json/geo/station", params)
         .done(function(data) {
           console.log(data);
           var stations = [];
