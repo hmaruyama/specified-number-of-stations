@@ -142,14 +142,21 @@
         .done(function(data) {
           console.log(data);
           var stations = [];
-          data["ResultSet"]["Point"].forEach(function(point) {
-            stations.push({
-              name: point["Station"]["code"],
-              name: point["Station"]["Name"],
-              lat: parseFloat(point["GeoPoint"]["lati_d"]),
-              lng: parseFloat(point["GeoPoint"]["longi_d"])
+          if (data["ResultSet"]["Point"]) {
+            if (Array.isArray(data["ResultSet"]["Point"])) {
+              var points = data["ResultSet"]["Point"];
+            } else {
+              var points = [data["ResultSet"]["Point"]];
+            }
+            points.forEach(function(point) {
+              stations.push({
+                name: point["Station"]["code"],
+                name: point["Station"]["Name"],
+                lat: parseFloat(point["GeoPoint"]["lati_d"]),
+                lng: parseFloat(point["GeoPoint"]["longi_d"])
+              });
             });
-          });
+          }
           callback({
             stations: stations
           });
