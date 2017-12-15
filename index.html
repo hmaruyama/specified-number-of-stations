@@ -30,6 +30,8 @@
   <script>
     var EWS_KEY = 'fHguF2wJV6Fhj2gC'; // 駅すぱあとWebサービスのアクセスキー
 
+    var INIT_LATLNG = { lat: 35.682225, lng: 139.764688 };
+
     var g_station_count;
     var g_range;
 
@@ -39,7 +41,7 @@
     var g_circles = [];
 
     $(function() {
-      var latlng = new google.maps.LatLng(35.682225,139.764688);
+      var latlng = new google.maps.LatLng(INIT_LATLNG.lat, INIT_LATLNG.lng);
       var opts = {
         zoom: 13,
         center: latlng,
@@ -53,11 +55,15 @@
     });
 
     function initProblem() {
-      g_station_count = 1 + Math.floor(Math.random() * 40);
-      g_range = 1000 + Math.floor(Math.random() * (10 + g_station_count / 5)) * 100;
-      var html = '';
-      html += '半径 <b>' + g_range + 'メートル</b> 以内にちょうど <b>' + g_station_count + '個</b> の駅がある地点を探せ！';
-      $('#problem_text').html(html);
+      g_range = 1000 + Math.floor(Math.random() * 30) * 100;
+      var lat = INIT_LATLNG.lat + Math.random() * 0.2;
+      var lng = INIT_LATLNG.lng + Math.random() * 0.2;
+      getStationsByLatLng(lat, lng, g_range, function(data) {
+        g_station_count = data.stations.length;
+        var html = '';
+        html += '半径 <b>' + g_range + 'メートル</b> 以内にちょうど <b>' + g_station_count + '個</b> の駅がある地点を探せ！';
+        $('#problem_text').html(html);
+      });
     }
 
     function onClickMap(e) {
